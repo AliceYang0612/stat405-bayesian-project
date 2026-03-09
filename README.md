@@ -78,47 +78,40 @@ We will consider two Bayesian models.
 
 ### Model 1: Baseline Poisson Model
 
-First, we assume that daily bike rentals follow a Poisson distribution:
+We assume that the number of daily bike rentals follows a Poisson distribution:
 
-\[
-y_i \sim Poisson(\lambda)
-\]
+$$
+y_i \sim \text{Poisson}(\lambda)
+$$
 
-where \(y_i\) is the number of bike rentals on day \(i\).
+where $y_i$ is the number of bike rentals on day $i$.
 
 We place a Gamma prior on the rate parameter:
 
-\[
-\lambda \sim Gamma(a,b)
-\]
+$$
+\lambda \sim \text{Gamma}(a,b)
+$$
 
 This model assumes that bike demand is constant across days.
-
 ---
 
 ### Model 2: Bayesian Poisson Regression
 
-To incorporate weather effects, we extend the model to a Poisson regression:
+$$
+y_i \sim \text{Poisson}(\lambda_i)
+$$
 
-\[
-y_i \sim Poisson(\lambda_i)
-\]
-
-\[
+$$
 \log(\lambda_i) = \beta_0 + \beta_1 temp_i
-\]
+$$
 
-where \(temp_i\) is the temperature on day \(i\).
-
-We use Normal priors for the regression coefficients:
-
-\[
+$$
 \beta_0 \sim N(0,10)
-\]
+$$
 
-\[
+$$
 \beta_1 \sim N(0,10)
-\]
+$$
 
 This model allows the expected number of bike rentals to vary with temperature.
 
