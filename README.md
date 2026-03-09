@@ -67,7 +67,7 @@ This dataset covers the period from January 1, 2018 to December 31, 2019 and inc
 
 Data source:
 
-https://www.kaggle.com/search?q=chicago+bike+sharing+in%3Adatasets
+[https://www.kaggle.com/search?q=chicago+bike+sharing+in%3Adatasets](https://www.kaggle.com/datasets/vaidehisavaliya08/bike-sharing-demand)
 
 Key variables include:
 
