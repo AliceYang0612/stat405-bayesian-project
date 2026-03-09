@@ -26,7 +26,7 @@ In this project, we will apply Bayesian inference to study how weather condition
 
 The main question of this project is:
 
-How does temperature affect daily bike rental demand?
+#### How does temperature affect daily bike rental demand?
 
 Since the number of rented bikes represents count data, it is natural to model it using a Poisson distribution. We will estimate the relationship between temperature and bike rentals using a Bayesian Poisson regression model.
 
@@ -62,6 +62,10 @@ The variable **cnt** represents the number of bike rentals per day and will be u
 As a backup option, we will use another bike sharing dataset that also contains daily bike rental counts and weather information.
 
 This dataset covers the period from January 1, 2018 to December 31, 2019 and includes 730 daily observations. Similar to the main dataset, it contains variables describing weather conditions and the total number of rented bikes.
+
+Data source:
+
+https://www.kaggle.com/search?q=chicago+bike+sharing+in%3Adatasets
 
 Key variables include:
 
