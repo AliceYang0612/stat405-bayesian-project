@@ -4,7 +4,9 @@ This repository contains the course project for STAT405.
 
 The goal of this project is to apply Bayesian inference to a real-world dataset.
 
-Team members:  Aiwei Yang 42274209       Chang Sun 19062439
+Team members:  
+-Aiwei Yang 42274209       
+-Chang Sun 19062439
 
 Repository structure:
 - proposal/ : project proposal
@@ -82,7 +84,7 @@ Example rows of the dataset:
 | 2018-01-02 | 0.30 | 0.74 | 0.15 | 721 |
 | 2018-01-03 | 0.25 | 0.70 | 0.20 | 689 |
 
-Because the structure of this dataset is similar to the main dataset, the same Bayesian Poisson regression model can be applied if necessary.
+Because this dataset contains the same key variables (bike rental counts, temperature, humidity, and wind speed) as the main dataset, the same Bayesian Poisson regression model can be applied if necessary.
 
 ---
 
