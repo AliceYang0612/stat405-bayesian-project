@@ -110,17 +110,37 @@ These exploratory analyses will help motivate the choice of predictors used in t
 
 ---
 
-## 5. Bayesian Model
+## 5. Bayesian Models
 
-We will model the number of daily bike rentals using a Bayesian Poisson regression model.
+We consider two Bayesian models for daily bike rental counts.
 
-The likelihood is
+### Model 1: Baseline Poisson Model
+
+First, we assume that the number of daily bike rentals follows a Poisson distribution with a constant rate:
+
+$$
+y_i \sim \text{Poisson}(\lambda)
+$$
+
+where $y_i$ represents the number of bike rentals on day $i$.
+
+We place a Gamma prior on the rate parameter:
+
+$$
+\lambda \sim \text{Gamma}(a,b)
+$$
+
+This model assumes that the expected bike demand is constant across days and does not depend on weather conditions.
+
+---
+
+### Model 2: Bayesian Poisson Regression
+
+To account for the effect of temperature, we extend the model to a Poisson regression.
 
 $$
 y_i \sim \text{Poisson}(\lambda_i)
 $$
-
-where $y_i$ represents the number of bike rentals on day $i$.
 
 The expected number of rentals is modeled as
 
@@ -128,7 +148,7 @@ $$
 \log(\lambda_i) = \beta_0 + \beta_1 temp_i
 $$
 
-where $temp_i$ is the temperature on day $i$.
+where $temp_i$ represents the temperature on day $i$.
 
 We place Normal priors on the regression coefficients:
 
@@ -164,11 +184,11 @@ We will also use self-normalized importance sampling (SNIS). In this approach, w
 
 ---
 
-## 7. Inference Method Comparison
+## 7 Model and Inference Comparison
 
-We will compare the results obtained from Laplace approximation and SNIS. In particular, we will examine posterior mean estimates and credible intervals for the regression parameters.
+We will compare both Bayesian models and inference methods. In particular, we will examine posterior mean estimates and credible intervals for the model parameters.
 
-This comparison will help evaluate how well the two approximate Bayesian inference methods perform for this model.
+We will also compare the results obtained from Laplace approximation and self-normalized importance sampling (SNIS) to evaluate the performance of the two approximate inference methods.
 
 ---
 
