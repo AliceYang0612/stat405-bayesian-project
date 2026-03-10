@@ -8,6 +8,14 @@ Team members:
 -Aiwei Yang 42274209       
 -Chang Sun 19062439
 
+## Team Contribution Plan
+
+To ensure that both team members contribute equally to the project, the work will be divided into several stages.
+
+Both members will collaborate on data exploration and model design. Aiwei will focus on implementing the Laplace approximation method, while Chang will implement the self-normalized importance sampling (SNIS) method. Afterward, both members will work together to analyze the results, compare the inference methods, and prepare the final report and presentation.
+
+All code and documents will be maintained in the shared GitHub repository so that both team members can contribute and review each other's work.
+
 Repository structure:
 - proposal/ : project proposal
 - data/ : datasets used in the project
