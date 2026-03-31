@@ -1,1 +1,22 @@
+# Model 2: Bayesian Poisson Regression
 
+# design matrix
+X <- model.matrix(cnt ~ t1 + hum + wind_speed + is_weekend, data = df)
+
+# response
+y <- df$cnt
+
+# log posterior function
+log_posterior <- function(beta, X, y) {
+  
+  eta <- X %*% beta
+  lambda <- exp(eta)
+  
+  # log likelihood (Poisson)
+  log_lik <- sum(y * eta - lambda)
+  
+  # log prior (Normal(0,10))
+  log_prior <- sum(dnorm(beta, mean = 0, sd = 10, log = TRUE))
+  
+  return(log_lik + log_prior)
+}
