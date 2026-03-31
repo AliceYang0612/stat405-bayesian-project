@@ -1,1 +1,25 @@
+# Model 1: Baseline Poisson Model
 
+# response variable
+y <- df$cnt
+
+# prior parameters (Gamma prior)
+a <- 1
+b <- 1
+
+# posterior parameters
+posterior_a <- a + sum(y)
+posterior_b <- b + length(y)
+
+# posterior mean
+posterior_mean <- posterior_a / posterior_b
+
+# posterior variance
+posterior_var <- posterior_a / (posterior_b^2)
+
+# posterior sd
+posterior_sd <- sqrt(posterior_var)
+
+# print results
+posterior_mean
+posterior_sd
