@@ -1,5 +1,5 @@
 glm_fit <- glm(cnt ~ t1 + hum + wind_speed + is_weekend,
                family = poisson(),
                data = df)
-
+#Fig.6
 summary(glm_fit)
