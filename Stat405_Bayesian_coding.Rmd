@@ -1,0 +1,374 @@
+---
+title: "Stat405 Bayesian Coding Part"
+author: "Aiwei Yang42274209, Chang Sun 19062439"
+date: "2026-04-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+# Load required packages
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(cmdstanr)
+library(posterior)
+library(bayesplot)
+
+theme_set(theme_minimal(base_size = 12))
+set.seed(123)
+```
+
+1.  Read and prepare data
+
+```{r}
+# Read dataset
+df <- read_csv("day2018.csv", show_col_types = FALSE)
+
+# Convert selected variables to factors
+bike_clean <- df %>%
+  mutate(
+    season = factor(season),
+    yr = factor(yr),
+    workingday = factor(workingday),
+    holiday = factor(holiday)
+  )
+# Standardize continuous predictors
+bike_clean <- bike_clean %>%
+  mutate(
+    temp_std = as.numeric(scale(temp)),
+    hum_std = as.numeric(scale(hum)),
+    windspeed_std = as.numeric(scale(windspeed))
+  )
+# Quick check
+glimpse(bike_clean)
+summary(bike_clean)
+```
+
+2.  Build design matrix
+
+```{r}
+X <- model.matrix(
+  cnt ~ season + yr + temp_std + hum_std + windspeed_std + workingday + holiday,
+  data = bike_clean
+)
+dim(X)
+head(X)
+```
+
+3.  Prepare data for Stan
+
+```{r}
+stan_data <- list(
+  N = nrow(X),
+  K = ncol(X),
+  y = bike_clean$cnt,
+  X = X
+)
+
+stan_data$N
+stan_data$K
+head(stan_data$y)
+```
+
+4.  Remove old stan file if they exist
+
+```{r}
+if (file.exists("poisson_model.stan")) file.remove("poisson_model.stan")
+if (file.exists("negbin_model.stan")) file.remove("negbin_model.stan")
+```
+
+5.  Write Poisson Stan model
+
+```{r}
+poisson_code <- "
+data {
+  int<lower=1> N;
+  array[N] int<lower=0> y;
+  int<lower=1> K;
+  matrix[N, K] X;
+}
+parameters {
+  vector[K] beta;
+}
+model {
+  beta ~ normal(0, 2.5);
+  y ~ poisson_log(X * beta);
+}
+generated quantities {
+  vector[N] log_lik;
+  array[N] int y_rep;
+
+  for (n in 1:N) {
+    log_lik[n] = poisson_log_lpmf(y[n] | X[n] * beta);
+    y_rep[n] = poisson_log_rng(X[n] * beta);
+  }
+}
+"
+
+writeLines(poisson_code, "poisson_model.stan")
+
+# Verify the file contents
+readLines("poisson_model.stan")
+```
+
+6.  Compile Poisson model
+
+```{r}
+poisson_mod <- cmdstan_model("poisson_model.stan")
+```
+
+7.  Fit Poisson model using HMC
+
+```{r}
+fit_poisson_hmc <- poisson_mod$sample(
+  data = stan_data,
+  chains = 4,
+  parallel_chains = 4,
+  iter_warmup = 1500,
+  iter_sampling = 1500,
+  adapt_delta = 0.99,
+  max_treedepth = 15,
+  seed = 123,
+  refresh = 500
+)  
+
+poisson_hmc_summary <- fit_poisson_hmc$summary()
+poisson_hmc_summary
+```
+
+8.  Inspect Poisson HMC diagnostics
+
+```{r}
+# Print summary table
+poisson_hmc_summary
+
+# Check the largest R-hat value
+max(poisson_hmc_summary$rhat, na.rm = TRUE)
+
+# Check the smallest bulk ESS
+min(poisson_hmc_summary$ess_bulk, na.rm = TRUE)
+
+# Check the smallest tail ESS
+min(poisson_hmc_summary$ess_tail, na.rm = TRUE)
+
+# Traceplots for selected Poisson coefficients
+mcmc_trace(
+  fit_poisson_hmc$draws(variables = c("beta[1]", "beta[2]", "beta[3]"))
+)
+```
+
+9.  Fit Poisson model using Variational Inference
+
+```{r}
+fit_poisson_vi <- poisson_mod$variational(
+  data = stan_data,
+  algorithm = "meanfield",
+  iter = 20000,
+  output_samples = 2000,
+  seed = 123
+)
+
+# Extract summary
+poisson_vi_summary <- fit_poisson_vi$summary()
+
+# Print summary table
+poisson_vi_summary
+```
+
+10. Compare Poisson HMC and VI
+
+```{r}
+poisson_hmc_beta <- fit_poisson_hmc$summary(variables = "beta")
+poisson_vi_beta  <- fit_poisson_vi$summary(variables = "beta")
+
+comparison_poisson <- data.frame(
+  parameter = poisson_hmc_beta$variable,
+  hmc_mean  = poisson_hmc_beta$mean,
+  hmc_sd    = poisson_hmc_beta$sd,
+  vi_mean   = poisson_vi_beta$mean,
+  vi_sd     = poisson_vi_beta$sd
+)
+
+comparison_poisson
+```
+
+11. Write Negative Binomial Stan model
+
+```{r}
+negbin_code <- "
+data {
+  int<lower=1> N;
+  array[N] int<lower=0> y;
+  int<lower=1> K;
+  matrix[N, K] X;
+}
+parameters {
+  vector[K] beta;
+  real log_phi;
+}
+transformed parameters {
+  real<lower=0> phi;
+  phi = exp(log_phi);
+}
+model {
+  beta ~ normal(0, 2.5);
+  log_phi ~ normal(0, 1);
+  y ~ neg_binomial_2_log(X * beta, phi);
+}
+generated quantities {
+  vector[N] log_lik;
+  array[N] int y_rep;
+  for (n in 1:N) {
+    log_lik[n] = neg_binomial_2_log_lpmf(y[n] | X[n] * beta, phi);
+    y_rep[n] = neg_binomial_2_log_rng(X[n] * beta, phi);
+  }
+}
+"
+
+# Remove old file if it exists
+if (file.exists("negbin_model.stan")) file.remove("negbin_model.stan")
+
+# Write the Stan file
+writeLines(negbin_code, "negbin_model.stan")
+
+# Verify file contents
+readLines("negbin_model.stan")
+```
+
+12. Compile Negative Binomial model
+
+```{r}
+nb_mod <- cmdstan_model("negbin_model.stan", force_recompile = TRUE)
+```
+
+13. Fit Negative Binomial model using HMC
+
+```{r}
+fit_nb_hmc <- nb_mod$sample(
+  data = stan_data,
+  chains = 4,
+  parallel_chains = 4,
+  iter_warmup = 1500,
+  iter_sampling = 1500,
+  adapt_delta = 0.99,
+  max_treedepth = 15,
+  seed = 123,
+  refresh = 500
+)
+# Extract summary
+nb_hmc_summary <- fit_nb_hmc$summary()
+
+# Print summary table
+nb_hmc_summary
+```
+
+Since there is warning, we need to check r-hat and ESS
+
+```{r}
+nb_hmc_summary <- fit_nb_hmc$summary()
+
+max(nb_hmc_summary$rhat)
+min(nb_hmc_summary$ess_bulk)
+```
+
+14. Inspect Negative Binomial HMC diagnostics
+
+```{r}
+# Check the largest R-hat value
+max(nb_hmc_summary$rhat, na.rm = TRUE)
+
+# Check the smallest bulk ESS
+min(nb_hmc_summary$ess_bulk, na.rm = TRUE)
+
+# Check the smallest tail ESS
+min(nb_hmc_summary$ess_tail, na.rm = TRUE)
+
+# Traceplots for selected coefficients and dispersion parameter
+mcmc_trace(
+  fit_nb_hmc$draws(variables = c("beta[1]", "beta[2]", "beta[3]", "phi"))
+)
+```
+
+15. Fit Negative Binomial model using Variational Inference
+
+```{r}
+fit_nb_vi <- nb_mod$variational(
+  data = stan_data,
+  algorithm = "meanfield",
+  iter = 20000,
+  output_samples = 2000,
+  seed = 123
+)
+
+# Extract summary
+nb_vi_summary <- fit_nb_vi$summary()
+
+# Print summary table
+nb_vi_summary
+```
+
+16. Compare Negative Binomial HMC and VI
+
+```{r}
+nb_hmc_beta <- fit_nb_hmc$summary(variables = c("beta", "phi"))
+nb_vi_beta  <- fit_nb_vi$summary(variables = c("beta", "phi"))
+
+comparison_nb <- data.frame(
+  parameter = nb_hmc_beta$variable,
+  hmc_mean  = nb_hmc_beta$mean,
+  hmc_sd    = nb_hmc_beta$sd,
+  vi_mean   = nb_vi_beta$mean,
+  vi_sd     = nb_vi_beta$sd
+)
+
+comparison_nb
+```
+17. Posterior predictive checks
+```{r}
+# Extract posterior predictive draws
+yrep_poisson <- as_draws_matrix(fit_poisson_hmc$draws("y_rep"))
+yrep_nb <- as_draws_matrix(fit_nb_hmc$draws("y_rep"))
+
+# Posterior predictive density overlay
+ppc_dens_overlay(y = bike_clean$cnt, yrep = yrep_poisson[1:100, ])
+ppc_dens_overlay(y = bike_clean$cnt, yrep = yrep_nb[1:100, ])
+
+# Compare observed and replicated mean and variance
+ppc_stats <- data.frame(
+  model = c("Observed", "Poisson_HMC", "NB_HMC"),
+  mean = c(
+    mean(bike_clean$cnt),
+    mean(rowMeans(yrep_poisson)),
+    mean(rowMeans(yrep_nb))
+  ),
+  variance = c(
+    var(bike_clean$cnt),
+    mean(apply(yrep_poisson, 1, var)),
+    mean(apply(yrep_nb, 1, var))
+  )
+)
+
+ppc_stats
+```
+
+18. Save all summary tables
+
+```{r}
+write.csv(as.data.frame(poisson_hmc_summary), "poisson_hmc_summary.csv", row.names = FALSE)
+write.csv(as.data.frame(poisson_vi_summary), "poisson_vi_summary.csv", row.names = FALSE)
+write.csv(as.data.frame(nb_hmc_summary), "nb_hmc_summary.csv", row.names = FALSE)
+write.csv(as.data.frame(nb_vi_summary), "nb_vi_summary.csv", row.names = FALSE)
+
+write.csv(comparison_poisson, "comparison_poisson.csv", row.names = FALSE)
+write.csv(comparison_nb, "comparison_nb.csv", row.names = FALSE)
+write.csv(ppc_stats, "ppc_stats.csv", row.names = FALSE)
+```
+
+19. Compare computation times
+
+```{r}
+fit_poisson_hmc$time()
+fit_poisson_vi$time()
+fit_nb_hmc$time()
+fit_nb_vi$time()
+```
